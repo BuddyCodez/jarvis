@@ -1,3 +1,4 @@
+import sys
 import webbrowser
 import speech_recognition as sr
 import pyttsx3, json
@@ -10,16 +11,11 @@ now = datetime.now()
 api_key = "915f78753ce8e2e84a94d0e3f79a269b"
 base_url = "http://api.openweathermap.org/data/2.5/weather?"
 
-event = "Good Morning Sir"
-if (now.hour > 12):
-    event = "Good Afternoon Sir"
-if (now.hour > 17):
-    event = "Good Evening Sir"
+
 
 listener = sr.Recognizer()
 speaker = pyttsx3.init()
-listener.pause_threshold = 0.5
-listener.energy_threshold = 300
+listener.pause_threshold = 1
 
 
 def speak(text):
@@ -28,16 +24,31 @@ def speak(text):
     speaker.runAndWait()
 
 
-speak(event)
-speak("I am Jarvis, How can I help you ?")
+def wish():
+    event = "Good Morning Sir"
+    if (now.hour > 12):
+        event = "Good Afternoon Sir"
+    if (now.hour > 17):
+        event = "Good Evening Sir"
+    speak(event)
+    speak("I am Jarvis a Personal Assistant, How may I help you ?")
 
 
+def Recognize(audio):
+    try:
+        print("Recognizing ...")
+        text = listener.recognize_google(audio)
+        return text
+    except:
+        return None
 def take_command():
     try:
         with sr.Microphone() as source:
             print("Listening to your Commands ...")
-            voice = listener.listen(source)
-            command = listener.recognize_google(voice)
+            listener.adjust_for_ambient_noise(source)
+
+            voice = listener.listen(source, timeout=4, phrase_time_limit=7)
+            command = Recognize(voice)
             command = command.lower()
             print(command)
             return command
@@ -45,13 +56,7 @@ def take_command():
         return None
 
 
-headers = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'}
-
-
-
-
-
+wish()
 def callback():
     text = take_command()
     if (not text):
@@ -79,7 +84,7 @@ def callback():
         speak(f"current time is {current_time}")
     elif 'temperature in' in text:
         city = text.split("in")[1]  # ! Logic to get city name
-        complete_url = base_url + "appid=" + api_key + "&q=" + city 
+        complete_url = base_url + "&units=metric&appid=" + api_key + "&q=" + city
         response = requests.get(complete_url)
         x = response.json()
         if x["cod"] != "404":
@@ -88,13 +93,18 @@ def callback():
             current_temperature = y["temp"]
             current_pressure = y["pressure"]
             current_humidity = y["humidity"]
+            visiblity = x["visibility"]
             z = x["weather"]
             weather_description = z[0]["description"]
-            speak(f"Temperature in {city} is {str(current_temperature)} Kelvin")
-            speak(f"Atmospheric Pressure in {city} is {str(current_pressure)}")
-            speak(f"Humidity in {city} is {str(current_humidity)}")
-            speak(str(weather_description))
-
+            speak(f"Temperature in {city} is {str(current_temperature)} Celcius")
+            speak(
+                f"Atmospheric Pressure in {city} is {str(current_pressure)} Hectopascal")
+            speak(f"Humidity in {city} is {str(current_humidity)} percentage")
+            speak(f"Visiblity in {city} is {visiblity / 1000} km")
+            speak("Its seems like " + str(weather_description))
+    elif 'switch off' in text or 'turn off' in text or 'shutdown' in text:
+        speak('Going for a sleep sir.')
+        sys.exit()
     elif len(text) > 3:
         response = requests.get(
             "http://api.brainshop.ai/get?bid=169326&key=jdvXg0wzF22z63Q8&uid=JarvisBot&msg=" + text)
